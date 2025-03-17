@@ -89,7 +89,7 @@ Here are some requisites before starting :
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Rust and cargo should also be installed on your computer
+### Rust and cargo should also be installed on your computer
 
 ## Running the Program
 
