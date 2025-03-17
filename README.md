@@ -1,11 +1,12 @@
 # Projet-Rust---PERNOT-GOULLIN
 This is the repository for the Rust project (OUAP-4333E) of the pair PERNOT Thomas and GOULLIN Vianney
 
-Here are the requisites before starting
+Here are some requisites before starting :
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# Setting Up Kitty with a Custom Matrix Theme
+## Setting Up Kitty with a Custom Matrix Theme
 
-## Installation of Kitty
+### Installation of Kitty
 
 1. Install Kitty using your package manager:
 
@@ -20,16 +21,16 @@ Here are the requisites before starting
    kitty --version
    ```
 
-## Creating the Custom Matrix Theme
+### Creating the Custom Matrix Theme
 
 1. Navigate to the Kitty themes directory at the following path:
 
    ```sh
-   mkdir -p ~/.config/kitty/themes
+   ~/.config/kitty/themes
    ```
    
    If the directory does not exist, create it : 
-   
+
    ```sh
    mkdir -p ~/.config/kitty/themes
    ```
@@ -64,7 +65,7 @@ Here are the requisites before starting
    cursor #00FF00
    ```
 
-## Applying the Matrix Theme in Kitty
+### Applying the Matrix Theme in Kitty
 
 1. Open the Kitty configuration file:
 
@@ -84,5 +85,36 @@ Here are the requisites before starting
 
    ```sh
    kitty
+   ```
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Rust and cargo should also be installed on your computer
+
+## Running the Program
+
+1. Clone the project:
+   
+   ```sh
+   git clone <https://github.com/RussianDoggo21/Projet-Rust---PERNOT-GOULLIN>
+   cd <projet>
+   ```
+
+2. Compile and run the project with Cargo:
+   
+   ```sh
+   cargo run
+   ```
+
+3. Switch to Kitty:
+
+   ```sh
+   kitty
+   ```
+
+4. Execute the compiled binary:
+   
+   ```sh
+   ./target/debug/Projet
    ```
 
