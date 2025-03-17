@@ -22,8 +22,14 @@ Here are the requisites before starting
 
 ## Creating the Custom Matrix Theme
 
-1. Navigate to the Kitty themes directory:
+1. Navigate to the Kitty themes directory at the following path:
 
+   ```sh
+   mkdir -p ~/.config/kitty/themes
+   ```
+   
+   If the directory does not exist, create it : 
+   
    ```sh
    mkdir -p ~/.config/kitty/themes
    ```
