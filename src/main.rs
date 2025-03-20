@@ -39,11 +39,13 @@ fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, widt
     let direction = direction.parse::<Direction>().unwrap();
     let mut stdout = stdout();
 
+    let string_length = string.chars().count() as u16;
+
     let steps = match direction {
-        Direction::Down => height - y,
-        Direction::Up => y,
-        Direction::Left => x,
-        Direction::Right => width - x,
+        Direction::Down => height.saturating_sub(y + string_length),
+        Direction::Up => y.saturating_sub(string_length),
+        Direction::Left => x.saturating_sub(string_length),
+        Direction::Right => width.saturating_sub(x + string_length),
     };
 
     for step in 0..steps {
@@ -70,7 +72,7 @@ fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, widt
         {
             let _lock = stdout.lock();
 
-            for (i, ch) in string.chars().enumerate() {
+            for (i, _) in string.chars().enumerate() {
                 let step_updated = step + i as u16;
                 let (x_new, y_new) = match direction {
                     Direction::Down => (x, y + step_updated),
@@ -94,14 +96,14 @@ fn main()
 {
     let (width, height) = terminal::size().unwrap(); // On récupère la hauteur et la largeur du terminal
 
+    //OK mais ne va pas jusqu'au bout
+    print_string("abcdef", 5, 5, "right", height, width);
     print_string("abcdef", 5, 5, "down", height, width);
-    print_string("cccccc", 10, 5, "down", height, width);
-    //print_char('t', 10, 10, "right", &mut stdout, height, width);
 
-	//print_char_down('a', (0, height), 10, &mut stdout, height);    
-	//print_char_up('b', (height, 10), 10, &mut stdout, height);    
-	//print_char_to_right('c', (15, 30), 5, &mut stdout, width);  
-	//print_char_to_left('d', (20, 0), 10, &mut stdout, width);  
+    //Erreur de soustraction
+    print_string("abcdef", 5, height, "up", height, width);
+    print_string("cccccc", 100, 10, "left", height, width);
+
 }
 
 // D'abord compiler : cargo run puis
