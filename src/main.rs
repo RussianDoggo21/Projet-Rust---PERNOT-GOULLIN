@@ -1,11 +1,12 @@
 use crossterm::{cursor, terminal, ExecutableCommand};
-use std::io::{Write, stdout};
+use std::io::{Write, stdout, Stdout};
 use std::thread::sleep;
 use std::time::Duration;
 use std::str::FromStr;
 use std::thread;
 
 // Enumération permettant de savoir dans quelle direction les caractères de la digital rain "tomberont" 
+#[derive(Debug, Copy, Clone)]
 enum Direction 
 {
     Down,
@@ -34,7 +35,6 @@ impl FromStr for Direction
     }
 }
 
-
 fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, width: u16) {
     let direction = direction.parse::<Direction>().unwrap();
     let mut stdout = stdout();
@@ -42,10 +42,10 @@ fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, widt
     let string_length = string.chars().count() as u16;
 
     let steps = match direction {
-        Direction::Down => height.saturating_sub(y + string_length),
-        Direction::Up => y.saturating_sub(string_length),
-        Direction::Left => x.saturating_sub(string_length),
-        Direction::Right => width.saturating_sub(x + string_length),
+        Direction::Down => height.saturating_sub(y),
+        Direction::Up => y.saturating_add(1),
+        Direction::Left => x.saturating_add(1),
+        Direction::Right => width.saturating_sub(x),
     };
 
     for step in 0..steps {
@@ -54,15 +54,26 @@ fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, widt
 
             for (i, ch) in string.chars().enumerate() {
                 let step_updated = step + i as u16;
+
                 let (x_new, y_new) = match direction {
                     Direction::Down => (x, y + step_updated),
-                    Direction::Up => (x, y - step_updated),
-                    Direction::Left => (x - step_updated, y),
+                    Direction::Up => (x, y.saturating_sub(step_updated)),
+                    Direction::Left => (x.saturating_sub(step_updated), y),
                     Direction::Right => (x + step_updated, y),
                 };
 
-                stdout.execute(cursor::MoveTo(x_new, y_new)).unwrap();
-                print!("{ch}");
+                // Vérifier si le caractère est encore visible à l'écran
+                let visible = match direction {
+                    Direction::Down => y_new < height,
+                    Direction::Up => y_new < height,
+                    Direction::Left => x_new < width,
+                    Direction::Right => x_new < width,
+                };
+
+                if visible {
+                    stdout.execute(cursor::MoveTo(x_new, y_new)).unwrap();
+                    print!("{ch}");
+                }
             }
             stdout.flush().unwrap();
         }
@@ -74,15 +85,26 @@ fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, widt
 
             for (i, _) in string.chars().enumerate() {
                 let step_updated = step + i as u16;
+
                 let (x_new, y_new) = match direction {
                     Direction::Down => (x, y + step_updated),
-                    Direction::Up => (x, y - step_updated),
-                    Direction::Left => (x - step_updated, y),
+                    Direction::Up => (x, y.saturating_sub(step_updated)),
+                    Direction::Left => (x.saturating_sub(step_updated), y),
                     Direction::Right => (x + step_updated, y),
                 };
 
-                stdout.execute(cursor::MoveTo(x_new, y_new)).unwrap();
-                print!(" ");
+                // Vérifier si le caractère est encore visible avant de l'effacer
+                let visible = match direction {
+                    Direction::Down => y_new < height,
+                    Direction::Up => y_new < height,
+                    Direction::Left => x_new < width,
+                    Direction::Right => x_new < width,
+                };
+
+                if visible {
+                    stdout.execute(cursor::MoveTo(x_new, y_new)).unwrap();
+                    print!(" ");
+                }
             }
             stdout.flush().unwrap();
         }
@@ -97,12 +119,12 @@ fn main()
     let (width, height) = terminal::size().unwrap(); // On récupère la hauteur et la largeur du terminal
 
     //OK mais ne va pas jusqu'au bout
-    print_string("abcdef", 5, 5, "right", height, width);
+    //print_string("abcdef", 5, 5, "right", height, width);
     print_string("abcdef", 5, 5, "down", height, width);
 
     //Erreur de soustraction
     print_string("abcdef", 5, height, "up", height, width);
-    print_string("cccccc", 100, 10, "left", height, width);
+    //print_string("cccccc", 100, 10, "left", height, width);
 
 }
 
