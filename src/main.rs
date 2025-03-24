@@ -6,8 +6,8 @@ use std::thread::sleep;
 use std::str::FromStr;
 use rand::random_range;
 use std::time::{Duration, Instant};
-//use std::process::Command;
 use std::env;
+use std::process::Command;
 
 // Enumération permettant de savoir dans quelle direction les caractères de la digital rain "tomberont" 
 #[derive(Debug, Copy, Clone)]
@@ -88,6 +88,16 @@ fn reset_kitty_font_size() {
 }
 */
 
+// Fonction pour effacer complètement le terminal
+fn clear_screen() {
+    let status = Command::new("clear").status(); 
+    match status {
+        Ok(_) => {}, // Rien à faire en cas de succès
+        Err(e) => eprintln!("Erreur lors de l'effacement du terminal: {}", e),
+    }
+}
+
+
 // Fonction permettant d'afficher une chaîne de caractère string à l'écran dans la direction précisée
 // height et width sont en pratique les dimensions du terminal
 // x et y sont les coordonnées de départ ou de fin de déplacement de la string
@@ -135,7 +145,9 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
                 // Si c'est le cas, on peut l'afficher
                 if visible {
                     match stdout.execute(cursor::MoveTo(x_new, y_new)){
-                        Ok(_) => print!("{ch}"),
+                        Ok(_) => {
+                            print!("{ch}");
+                        },
                         Err(e) => eprintln!("Failed to move cursor: {}", e),
                     }
                     
@@ -222,6 +234,30 @@ fn random_string(len: usize, alphabet : Alphabet) -> String {
     return result 
 }
 
+fn xy_by_direction(direction: Direction, height: u16, width: u16) -> (u16, u16){
+    let (mut x, mut y) : (u16, u16) = (0, 0);
+    match direction{
+        Direction::Down => {
+            x = random_range(0..width); // Choisir une colonne aléatoire
+            y = 0;
+        },
+        Direction::Up => {
+            x = random_range(0..width);
+            y = height;
+        },
+        Direction::Right => {
+            x = 0;
+            y = random_range(0..height);
+        },
+        Direction::Left => {
+            x = width;
+            y = random_range(0..height);
+        },
+    };
+
+    return (x,y);
+}
+
 // Modifier la vitesse de chute des lettres en fonction de leur taille (abandonné)
 // Afficher différentes tailles des lettres (abandonné)
 // Arrière-plan / premier plan (abandonné)
@@ -257,8 +293,8 @@ fn main() {
         }
     };
 
-    //let (width, height) = terminal::size().unwrap(); // Dimensions du terminal
-    if let Ok((width, height)) = terminal::size() {
+    if let Ok((width, height)) = terminal::size() { // Dimension du terminal
+        clear_screen();
         let mut stdout = stdout(); // Sortie du terminal
     
         // Masquer le curseur pour un rendu plus propre
@@ -273,7 +309,6 @@ fn main() {
     
         for _ in 0..duration.as_millis() { // Vérifier si 10 secondes se sont écoulées
             for _ in 0..4{
-                let col = random_range(0..width); // Choisir une colonne aléatoire
                 let length = random_range(5..20); // Longueur aléatoire de la chute
                 //let font_size = random_range(5..100); // Taille aléatoire de la string
                 let generated_string = random_string(length, alphabet); // Générer une chaîne
@@ -281,8 +316,11 @@ fn main() {
                 // Lancer un thread pour faire tomber la chaîne
                 let width = width;
                 let height = height;
+
                 let handle = thread::spawn(move || {
-                    print_string(&generated_string, col, 0, direction, height, width);
+                    //let (mut x, mut y) = (0, 0); 
+                    let (x, y) = xy_by_direction(direction, height, width);
+                    print_string(&generated_string, x, y, direction, height, width);
                 });
                 handles.push(handle);
             }
@@ -316,8 +354,9 @@ fn main() {
         
 }
     
-// D'abord compiler : cargo run puis lancer la commande ./target/debug/Projet
-    
+// D'abord compiler : cargo run puis lancer la commande ./target/debug/Projet down numbers
+// Les caractères chinois et japonais ne s'effacent pas tous
+// Rajouter en paramètre la durée de l'affichageg
     
     
     
