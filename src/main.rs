@@ -3,8 +3,8 @@ use std::io::{Write, stdout};
 use std::thread::sleep;
 use std::time::Duration;
 use std::str::FromStr;
-//use std::thread;
-use rand::Rng;
+use std::thread;
+use rand::random_range;
 
 // Enumération permettant de savoir dans quelle direction les caractères de la digital rain "tomberont" 
 #[derive(Debug, Copy, Clone)]
@@ -155,7 +155,6 @@ fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, widt
 // Fonction pour générer une string de manière aléatoire en fonction de l'alphabet choisi
 fn random_string(len: usize, alphabet : &str) -> String {
 
-    //Rajouter une enum sur les alphabets ? Gérer les erreurs type Result
     let chosen_alphabet = alphabet.parse::<Alphabet>().unwrap();
 
     let charset = match chosen_alphabet{
@@ -167,14 +166,12 @@ fn random_string(len: usize, alphabet : &str) -> String {
         Alphabet::Greek => "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρστυφχψω",
     };
 
-    
-    let mut rng = rand::rng(); // Générateur de nombre pseudo-aléatoire
     let mut result = String::new(); // String à retourner à la fin
-    let charset_chars: Vec<char> = charset.chars().collect(); // Convertir en Vec<char> afin d'éviter les erreurs dûes aux tailles des caractères non latins
+    let charset_chars: Vec<char> = charset.chars().collect(); // Afin d'éviter les erreurs dûes aux tailles des caractères non latins
     let charset_len = charset_chars.len(); // Nombre réel de caractères
 
     for _ in 0..len {
-        let random_index = rng.random_range(0..charset_len); // Génère un index compris entre 0 et charset.len()
+        let random_index = random_range(0..charset_len); // Génère un index compris entre 0 et charset.len()
         let random_char = charset.chars().nth(random_index).unwrap(); // Sélectionne le caractère de charset à l'index random_index
         result.push(random_char); // Ajoute le caractère à la chaîne
     }
@@ -182,36 +179,35 @@ fn random_string(len: usize, alphabet : &str) -> String {
     return result 
 }
 
+// Modifier la vitesse de chute des lettres ?
+// Afficher différentes tailles et polices de lettres 
+// Besoin d'enum et de Result ?? Stockage des directions et des alphabets dans un vecteur puis sélection au hasard et match sur la sélection
+// Mais penser à la fin, interaction avec l'utilisateur : string donnée par l'utilisateur donc nécessité de gérer les erreurs
 
-fn main() 
-{
-    let (width, height) = terminal::size().unwrap(); // On récupère la hauteur et la largeur du terminal
-    let cyrillic = random_string(20, "cyrillic");
-    let str_cy: &str = &cyrillic; 
+fn main() {
 
-    let japanese = random_string(20, "japanese");
-    let str_j: &str = &japanese; 
+    let (width, height) = terminal::size().unwrap(); // Dimensions du terminal
+    let mut stdout = stdout(); // Sortie du terminal
+    
+    // Masquer le curseur pour un rendu plus propre
+    stdout.execute(cursor::Hide).unwrap();
 
-    let chinese = random_string(20, "chinese");
-    let str_ch: &str = &chinese; 
+    loop {
+        let col = random_range(0..width); // Choisir une colonne aléatoire
+        let length = random_range(5..20); // Longueur aléatoire de la chute
+        let generated_string = random_string(length, "cyrillic"); // Générer une chaîne
+        
+        // Lancer un thread pour faire tomber la chaîne
+        let width = width;
+        let height = height;
+        thread::spawn(move || {
+            print_string(&generated_string, col, 0, "down", height, width);
+        });
 
-    let greek = random_string(20, "greek");
-    let str_g: &str = &greek; 
-
-    print_string(str_cy, 5, 0, "down", height, width);
-    print_string(str_j, 10, 0, "down", height, width);
-    print_string(str_ch, 15, 0, "down", height, width);
-    print_string(str_g, 20, 0, "down", height, width);
-    //OK 
-    //print_string("abcdef", 5, 5, "right", height, width);
-    //print_string("abcdef", 5, 5, "down", height, width);
-
-    //Erreur de soustraction
-    //print_string("abcdef", 5, height, "up", height, width);
-    //print_string("cccccc", 100, 10, "left", height, width);
-
+        // Attendre avant de lancer une autre chute pour éviter la surcharge
+        thread::sleep(Duration::from_millis(150));
+    }
 }
 
-// D'abord compiler : cargo run puis
-// ./target/debug/Projet
+// D'abord compiler : cargo run puis lancer la commande ./target/debug/Projet
 
