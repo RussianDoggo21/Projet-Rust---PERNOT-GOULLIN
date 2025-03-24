@@ -1,10 +1,11 @@
 use crossterm::{cursor, terminal, ExecutableCommand};
 use std::io::{Write, stdout};
-use std::thread::sleep;
-use std::time::Duration;
-use std::str::FromStr;
 use std::thread;
+use std::thread::sleep;
+use std::str::FromStr;
 use rand::random_range;
+use std::time::{Duration, Instant};
+use std::process::Command;
 
 // Enumération permettant de savoir dans quelle direction les caractères de la digital rain "tomberont" 
 #[derive(Debug, Copy, Clone)]
@@ -66,12 +67,35 @@ impl FromStr for Alphabet{
     }
 }
 
+/* Abandonné pour l'instant */
+/* 
+// Fonction pour modifier la taille de la police dans Kitty
+fn set_kitty_font_size(size: u16) {
+    Command::new("kitty")
+        .args(&["@set-font-size", &size.to_string()])
+        .spawn()
+        .expect("Failed to change font size");
+}
+
+// Fonction pour réinitialiser la taille de la police dans Kitty
+fn reset_kitty_font_size() {
+    Command::new("kitty")
+        .args(&["@set-font-size", "14"]) // Remettre à la taille par défaut
+        .spawn()
+        .expect("Failed to reset font size");
+}
+*/
+
 // Fonction permettant d'afficher une chaîne de caractère string à l'écran dans la direction précisée
 // height et width sont en pratique les dimensions du terminal
 // x et y sont les coordonnées de départ ou de fin de déplacement de la string
-fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, width: u16) {
-    let direction = direction.parse::<Direction>().unwrap();
-    let mut stdout = stdout();
+fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, width: u16, font_size : u16) {
+    
+    let direction = direction.parse::<Direction>().unwrap(); // Conversion de la string en objet Direction
+    let mut stdout = stdout(); // Sortie du terminal
+
+    // Modifier la taille de la police avec Kitty
+    //set_kitty_font_size(font_size);
 
     // Utilisation de saturating_sub pour éviter les erreurs de résultats de soustraction négatifs (Résultats capés à 0)
     // Détermination de l'intervalle de déplacement de la chaîne de caractère
@@ -150,6 +174,10 @@ fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, widt
             stdout.flush().unwrap();
         }
     }
+
+    // Réinitialisation de la police de Kitty après affichage
+    //reset_kitty_font_size();
+
 }
 
 // Fonction pour générer une string de manière aléatoire en fonction de l'alphabet choisi
@@ -179,34 +207,56 @@ fn random_string(len: usize, alphabet : &str) -> String {
     return result 
 }
 
-// Modifier la vitesse de chute des lettres ?
-// Afficher différentes tailles et polices de lettres 
+// Modifier la vitesse de chute des lettres en fonction de leur taille (abandonné)
+// Afficher différentes tailles des lettres (abandonné)
+// Arrière-plan / premier plan (abandonné)
+
+// Affichage de plusieurs alphabets choisi au hasard
 // Besoin d'enum et de Result ?? Stockage des directions et des alphabets dans un vecteur puis sélection au hasard et match sur la sélection
 // Mais penser à la fin, interaction avec l'utilisateur : string donnée par l'utilisateur donc nécessité de gérer les erreurs
-
 fn main() {
-
     let (width, height) = terminal::size().unwrap(); // Dimensions du terminal
     let mut stdout = stdout(); // Sortie du terminal
     
     // Masquer le curseur pour un rendu plus propre
     stdout.execute(cursor::Hide).unwrap();
 
-    loop {
-        let col = random_range(0..width); // Choisir une colonne aléatoire
-        let length = random_range(5..20); // Longueur aléatoire de la chute
-        let generated_string = random_string(length, "cyrillic"); // Générer une chaîne
-        
-        // Lancer un thread pour faire tomber la chaîne
-        let width = width;
-        let height = height;
-        thread::spawn(move || {
-            print_string(&generated_string, col, 0, "down", height, width);
-        });
+    let start_time = Instant::now(); // Démarrer le chronomètre
+    let duration = Duration::from_secs(10); // Durée totale de la génération
+    let mut handles = vec![]; // Stocke les threads pour les attendre
 
+    for _ in 0..duration.as_millis() { // Vérifier si 10 secondes se sont écoulées
+        for _ in 0..4{
+            let col = random_range(0..width); // Choisir une colonne aléatoire
+            let length = random_range(5..20); // Longueur aléatoire de la chute
+            let font_size = random_range(5..100); // Taille aléatoire de la string
+            let generated_string = random_string(length, "cyrillic"); // Générer une chaîne
+            
+            // Lancer un thread pour faire tomber la chaîne
+            let width = width;
+            let height = height;
+            let handle = thread::spawn(move || {
+                print_string(&generated_string, col, 0, "down", height, width, font_size);
+            });
+            handles.push(handle);
+        }
+        
         // Attendre avant de lancer une autre chute pour éviter la surcharge
         thread::sleep(Duration::from_millis(150));
+
+        // Arrêter si le temps est écoulé
+        if start_time.elapsed() >= duration {
+            break;
+        }
     }
+
+    // Attendre que tous les threads en cours se terminent
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    // Réafficher le curseur avant de quitter
+    stdout.execute(cursor::Show).unwrap();
 }
 
 // D'abord compiler : cargo run puis lancer la commande ./target/debug/Projet
