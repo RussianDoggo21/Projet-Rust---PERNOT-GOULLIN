@@ -91,9 +91,8 @@ fn reset_kitty_font_size() {
 // Fonction permettant d'afficher une chaîne de caractère string à l'écran dans la direction précisée
 // height et width sont en pratique les dimensions du terminal
 // x et y sont les coordonnées de départ ou de fin de déplacement de la string
-fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, width: u16) {
+fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16, width: u16) {
     
-    let direction = direction.parse::<Direction>().unwrap(); // Conversion de la string en objet Direction
     let mut stdout = stdout(); // Sortie du terminal
 
     // Modifier la taille de la police avec Kitty
@@ -135,11 +134,18 @@ fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, widt
                 
                 // Si c'est le cas, on peut l'afficher
                 if visible {
-                    stdout.execute(cursor::MoveTo(x_new, y_new)).unwrap();
-                    print!("{ch}");
+                    match stdout.execute(cursor::MoveTo(x_new, y_new)){
+                        Ok(_) => print!("{ch}"),
+                        Err(e) => eprintln!("Failed to move cursor: {}", e),
+                    }
+                    
                 }
             }
-            stdout.flush().unwrap();
+            match stdout.flush() {
+                Ok(_) => {}, // Rien à faire en cas de succès
+                Err(e) => eprintln!("Erreur lors du flush de stdout: {}", e),
+            }
+            
         }
         
         // Pause pour l'animation
@@ -167,13 +173,19 @@ fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, widt
                     Direction::Left => x_new < width,
                     Direction::Right => x_new < width,
                 };
-
+                    
                 if visible {
-                    stdout.execute(cursor::MoveTo(x_new, y_new)).unwrap();
-                    print!(" ");
+                    match stdout.execute(cursor::MoveTo(x_new, y_new)){
+                        Ok(_) => print!(" "),
+                        Err(e) => eprintln!("Failed to move cursor: {}", e),
+                    }
                 }
             }
-            stdout.flush().unwrap();
+            match stdout.flush() {
+                Ok(_) => {}, // Rien à faire en cas de succès
+                Err(e) => eprintln!("Erreur lors du flush de stdout: {}", e),
+            }
+            
         }
     }
 
@@ -183,11 +195,9 @@ fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, widt
 }
 
 // Fonction pour générer une string de manière aléatoire en fonction de l'alphabet choisi
-fn random_string(len: usize, alphabet : &str) -> String {
+fn random_string(len: usize, alphabet : Alphabet) -> String {
 
-    let chosen_alphabet = alphabet.parse::<Alphabet>().unwrap();
-
-    let charset = match chosen_alphabet{
+    let charset = match alphabet{
         Alphabet::Chinese => "的一是在不了有和人这中大为上个国我以要他时来用们生到作地于出就分对成会可主发年动同工也能下过子说产种面而方后多定行学法所民得经十三之进着等部度家电力里如水化高自二理起小物现实加量都两体制机当",
         Alphabet::Japanese => "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン",
         Alphabet::Cyrillic => "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя",
@@ -202,8 +212,11 @@ fn random_string(len: usize, alphabet : &str) -> String {
 
     for _ in 0..len {
         let random_index = random_range(0..charset_len); // Génère un index compris entre 0 et charset.len()
-        let random_char = charset.chars().nth(random_index).unwrap(); // Sélectionne le caractère de charset à l'index random_index
-        result.push(random_char); // Ajoute le caractère à la chaîne
+        if let Some(random_char) = charset.chars().nth(random_index) {
+            result.push(random_char); // Ajoute le caractère à la chaîne
+        } else {
+            eprintln!("Error : index {} out of range for charset '{}'", random_index, charset); // En cas d'erreur
+        }
     }
 
     return result 
@@ -214,8 +227,6 @@ fn random_string(len: usize, alphabet : &str) -> String {
 // Arrière-plan / premier plan (abandonné)
 
 // Affichage de plusieurs alphabets choisi au hasard
-// Besoin d'enum et de Result ?? Stockage des directions et des alphabets dans un vecteur puis sélection au hasard et match sur la sélection
-// Mais penser à la fin, interaction avec l'utilisateur : string donnée par l'utilisateur donc nécessité de gérer les erreurs
 fn main() {
 
     let args: Vec<String> = env::args().collect(); // Récupérer les arguments fournis par l'utilisateur
@@ -225,70 +236,89 @@ fn main() {
 
     // Affichage d'un message d'erreur + explication d'utilisation si il n'y a pas le nombre d'argument requis
     if args.len() != 3 {
-        println!("Number of arguments incorrect \n Correct use : executable direction alphabet");
+        println!("Number of arguments incorrect \nCorrect use : executable direction alphabet");
         exit(1);
     }    
     
     // Test des strings données par l'utilisateur
-    if let Err(e) = args[1].parse::<Direction>() {
-        eprintln!("{}", e);
-        exit(1); // Quitter le programme avec un code d'erreur
-    }
+    let direction: Direction = match args[1].parse() {
+        Ok(dir) => dir,
+        Err(e) => {
+            eprintln!("{}", e);
+            exit(1);
+        }
+    };
     
-    if let Err(e) = args[2].parse::<Alphabet>() {
-        eprintln!("{}", e);
-        exit(1); // Quitter le programme avec un code d'erreur
-    }
+    let alphabet: Alphabet = match args[2].parse() {
+        Ok(alph) => alph,
+        Err(e) => {
+            eprintln!("{}", e);
+            exit(1);
+        }
+    };
+
+    //let (width, height) = terminal::size().unwrap(); // Dimensions du terminal
+    if let Ok((width, height)) = terminal::size() {
+        let mut stdout = stdout(); // Sortie du terminal
     
-
-    let direction = args[1].clone();
-    let alphabet = &args[2].clone();
-
-    let (width, height) = terminal::size().unwrap(); // Dimensions du terminal
-    let mut stdout = stdout(); // Sortie du terminal
+        // Masquer le curseur pour un rendu plus propre
+        match stdout.execute(cursor::Hide) {
+            Ok(_) => (),
+            Err(e) => eprintln!("Erreur lors du masquage du curseur : {}", e),
+        }
     
-    // Masquer le curseur pour un rendu plus propre
-    stdout.execute(cursor::Hide).unwrap();
-
-    let start_time = Instant::now(); // Démarrer le chronomètre
-    let duration = Duration::from_secs(10); // Durée totale de la génération
-    let mut handles = vec![]; // Stocke les threads pour les attendre
-
-    for _ in 0..duration.as_millis() { // Vérifier si 10 secondes se sont écoulées
-        for _ in 0..4{
-            let direction_clone = direction.clone();
-            let col = random_range(0..width); // Choisir une colonne aléatoire
-            let length = random_range(5..20); // Longueur aléatoire de la chute
-            //let font_size = random_range(5..100); // Taille aléatoire de la string
-            let generated_string = random_string(length, alphabet); // Générer une chaîne
+        let start_time = Instant::now(); // Démarrer le chronomètre
+        let duration = Duration::from_secs(10); // Durée totale de la génération
+        let mut handles = vec![]; // Stocke les threads pour les attendre
+    
+        for _ in 0..duration.as_millis() { // Vérifier si 10 secondes se sont écoulées
+            for _ in 0..4{
+                let col = random_range(0..width); // Choisir une colonne aléatoire
+                let length = random_range(5..20); // Longueur aléatoire de la chute
+                //let font_size = random_range(5..100); // Taille aléatoire de la string
+                let generated_string = random_string(length, alphabet); // Générer une chaîne
+                
+                // Lancer un thread pour faire tomber la chaîne
+                let width = width;
+                let height = height;
+                let handle = thread::spawn(move || {
+                    print_string(&generated_string, col, 0, direction, height, width);
+                });
+                handles.push(handle);
+            }
             
-            // Lancer un thread pour faire tomber la chaîne
-            let width = width;
-            let height = height;
-            let handle = thread::spawn(move || {
-                print_string(&generated_string, col, 0, &direction_clone, height, width);
-            });
-            handles.push(handle);
-        }
-        
-        // Attendre avant de lancer une autre chute pour éviter la surcharge
-        thread::sleep(Duration::from_millis(150));
-
-        // Arrêter si le temps est écoulé
-        if start_time.elapsed() >= duration {
-            break;
-        }
-    }
-
-    // Attendre que tous les threads en cours se terminent
-    for handle in handles {
-        handle.join().unwrap();
-    }
-
-    // Réafficher le curseur avant de quitter
-    stdout.execute(cursor::Show).unwrap();
+            // Attendre avant de lancer une autre chute pour éviter la surcharge
+            thread::sleep(Duration::from_millis(150));
     
-}
+            // Arrêter si le temps est écoulé
+            if start_time.elapsed() >= duration {
+                break;
+            }
+        }
+    
+        // Attendre que tous les threads en cours se terminent
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    
+        // Réafficher le curseur avant de quitter
+        match stdout.execute(cursor::Show) {
+            Ok(_) => (),
+            Err(e) => eprintln!("Erreur lors du masquage du curseur : {}", e),
+        }
 
+    } 
+    
+    else {
+        eprintln!("Erreur : impossible d'obtenir la taille du terminal.");
+        return;
+    }
+        
+}
+    
 // D'abord compiler : cargo run puis lancer la commande ./target/debug/Projet
+    
+    
+    
+    
 
