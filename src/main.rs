@@ -258,6 +258,8 @@ fn xy_by_direction(direction: Direction, height: u16, width: u16) -> (u16, u16){
     return (x,y);
 }
 
+
+
 // Modifier la vitesse de chute des lettres en fonction de leur taille (abandonné)
 // Afficher différentes tailles des lettres (abandonné)
 // Arrière-plan / premier plan (abandonné)
@@ -357,7 +359,66 @@ fn main() {
 // D'abord compiler : cargo run puis lancer la commande ./target/debug/Projet down numbers
 // Les caractères chinois et japonais ne s'effacent pas tous
 // Rajouter en paramètre la durée de l'affichageg
-    
-    
-    
 
+
+
+
+
+
+
+/*______________________________________________________________________________________________________________________*/
+//For now, only is able to print an image (more details :cf. main)
+
+
+/*
+use std::env;
+use image::{GrayImage, io::Reader as ImageReader};
+use term_size;
+
+
+//Returns the terminal size
+fn get_terminal_size() -> (usize, usize) {
+    if let Some((width, height)) = term_size::dimensions() {
+        (width, height)}
+    else {
+        (50, 50) //Default size if measurement fails
+    }
+}
+
+fn resize_image(img: &GrayImage, width: u32, height: u32) -> GrayImage {
+    image::imageops::resize(img, width, height, image::imageops::FilterType::Nearest)
+}
+
+//Prints an image adapted to the terminal size (input image in black and white or grayscale) with the character of your choice
+fn main() {
+
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 3 {
+        eprintln!("Usage: {} <image_path> <character>", args[0]);
+        return;
+    }
+
+    let img_path = &args[1];
+    let display_char = args[2].chars().next().unwrap_or('#');
+
+    let img = ImageReader::open(img_path)
+        .expect("Failed to open image")
+        .decode()
+        .expect("Failed to decode image")
+        .into_luma8();
+
+    let (term_width, term_height) = term_size::dimensions().unwrap_or((80, 24));
+
+    let img_resized = resize_image(&img, term_width as u32, (term_height * 2) as u32); // Adjust height for aspect ratio
+
+    for y in (0..img_resized.height()).step_by(2) {
+        for x in 0..img_resized.width() {
+            let pixel = img_resized.get_pixel(x, y)[0];
+            let char_to_print = if pixel > 128 { display_char } else { ' ' };
+            print!("{}", char_to_print);
+        }
+        println!();
+    }
+}
+
+*/
