@@ -1,11 +1,13 @@
 use crossterm::{cursor, terminal, ExecutableCommand};
 use std::io::{Write, stdout};
+use std::process::exit;
 use std::thread;
 use std::thread::sleep;
 use std::str::FromStr;
 use rand::random_range;
 use std::time::{Duration, Instant};
-use std::process::Command;
+//use std::process::Command;
+use std::env;
 
 // Enumération permettant de savoir dans quelle direction les caractères de la digital rain "tomberont" 
 #[derive(Debug, Copy, Clone)]
@@ -44,7 +46,7 @@ impl FromStr for Direction
             "up" => Ok(Direction::Up),
             "left" => Ok(Direction::Left),
             "right" => Ok(Direction::Right),
-            _ => Err(format!("Error : unknown direction '{}'. \nValid directions : 'up', 'down', 'left', 'right' ", s)),
+            _ => Err(format!("Error : unknown direction '{}'. Valid directions : 'up', 'down', 'left', 'right' ", s)),
         }
     }
 }
@@ -62,7 +64,7 @@ impl FromStr for Alphabet{
             "japanese" => Ok(Alphabet::Japanese),
             "chinese" => Ok(Alphabet::Chinese),
             "greek" => Ok(Alphabet::Greek),
-             _ => Err(format!("Error : unknown alphabet {}. \nValid alphabets : 'numbers', 'latin', 'cyrillic', 'japanese', 'chinese', 'greek' ", s))
+             _ => Err(format!("Error : unknown alphabet '{}'. Valid alphabets : 'numbers', 'latin', 'cyrillic', 'japanese', 'chinese', 'greek' ", s)),
         }
     }
 }
@@ -89,7 +91,7 @@ fn reset_kitty_font_size() {
 // Fonction permettant d'afficher une chaîne de caractère string à l'écran dans la direction précisée
 // height et width sont en pratique les dimensions du terminal
 // x et y sont les coordonnées de départ ou de fin de déplacement de la string
-fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, width: u16, font_size : u16) {
+fn print_string(string: &str, x: u16, y: u16, direction: &str, height: u16, width: u16) {
     
     let direction = direction.parse::<Direction>().unwrap(); // Conversion de la string en objet Direction
     let mut stdout = stdout(); // Sortie du terminal
@@ -215,6 +217,33 @@ fn random_string(len: usize, alphabet : &str) -> String {
 // Besoin d'enum et de Result ?? Stockage des directions et des alphabets dans un vecteur puis sélection au hasard et match sur la sélection
 // Mais penser à la fin, interaction avec l'utilisateur : string donnée par l'utilisateur donc nécessité de gérer les erreurs
 fn main() {
+
+    let args: Vec<String> = env::args().collect(); // Récupérer les arguments fournis par l'utilisateur
+    // args[0] : nom de l'exécutable (./target/debug/Projet)
+    // args[1] : direction de la digital rain
+    // args[2] : alphabet choisi
+
+    // Affichage d'un message d'erreur + explication d'utilisation si il n'y a pas le nombre d'argument requis
+    if args.len() != 3 {
+        println!("Number of arguments incorrect \n Correct use : executable direction alphabet");
+        exit(1);
+    }    
+    
+    // Test des strings données par l'utilisateur
+    if let Err(e) = args[1].parse::<Direction>() {
+        eprintln!("{}", e);
+        exit(1); // Quitter le programme avec un code d'erreur
+    }
+    
+    if let Err(e) = args[2].parse::<Alphabet>() {
+        eprintln!("{}", e);
+        exit(1); // Quitter le programme avec un code d'erreur
+    }
+    
+
+    let direction = args[1].clone();
+    let alphabet = &args[2].clone();
+
     let (width, height) = terminal::size().unwrap(); // Dimensions du terminal
     let mut stdout = stdout(); // Sortie du terminal
     
@@ -227,16 +256,17 @@ fn main() {
 
     for _ in 0..duration.as_millis() { // Vérifier si 10 secondes se sont écoulées
         for _ in 0..4{
+            let direction_clone = direction.clone();
             let col = random_range(0..width); // Choisir une colonne aléatoire
             let length = random_range(5..20); // Longueur aléatoire de la chute
-            let font_size = random_range(5..100); // Taille aléatoire de la string
-            let generated_string = random_string(length, "cyrillic"); // Générer une chaîne
+            //let font_size = random_range(5..100); // Taille aléatoire de la string
+            let generated_string = random_string(length, alphabet); // Générer une chaîne
             
             // Lancer un thread pour faire tomber la chaîne
             let width = width;
             let height = height;
             let handle = thread::spawn(move || {
-                print_string(&generated_string, col, 0, "down", height, width, font_size);
+                print_string(&generated_string, col, 0, &direction_clone, height, width);
             });
             handles.push(handle);
         }
@@ -257,6 +287,7 @@ fn main() {
 
     // Réafficher le curseur avant de quitter
     stdout.execute(cursor::Show).unwrap();
+    
 }
 
 // D'abord compiler : cargo run puis lancer la commande ./target/debug/Projet
