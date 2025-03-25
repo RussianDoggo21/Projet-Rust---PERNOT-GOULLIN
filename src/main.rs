@@ -367,58 +367,95 @@ fn main() {
 
 
 /*______________________________________________________________________________________________________________________*/
-//For now, only is able to print an image (more details :cf. main)
+
+//Prints a video on the terminal with a decent framerate (actually breaks down the video into multiple frames).
+//OK appearance, cannot do better anyway due to inherent terminal resolution.
+
+// DISCLAIMER : The code was generated using ChatGPT, but most of its logic and mechanics have been personally understood.
+
+
+// IMPORTANT - Before executing : 
+// sudo apt install ffmpeg
+// cargo add image term_size crossterm
+
 
 
 /*
-use std::env;
-use image::{GrayImage, io::Reader as ImageReader};
+
+
+use image::{GrayImage, io::Reader as ImageReader, Luma};
+use std::{env, fs, thread, time::Duration, process::Command};
 use term_size;
+use crossterm::{execute, terminal::{Clear, ClearType}};
 
-
-//Returns the terminal size
-fn get_terminal_size() -> (usize, usize) {
-    if let Some((width, height)) = term_size::dimensions() {
-        (width, height)}
-    else {
-        (50, 50) //Default size if measurement fails
-    }
-}
-
-fn resize_image(img: &GrayImage, width: u32, height: u32) -> GrayImage {
-    image::imageops::resize(img, width, height, image::imageops::FilterType::Nearest)
-}
-
-//Prints an image adapted to the terminal size (input image in black and white or grayscale) with the character of your choice
 fn main() {
-
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
-        eprintln!("Usage: {} <image_path> <character>", args[0]);
+        eprintln!("Usage: {} <video_path> <character>", args[0]);
         return;
     }
 
-    let img_path = &args[1];
+    let video_path = &args[1];
     let display_char = args[2].chars().next().unwrap_or('#');
 
-    let img = ImageReader::open(img_path)
-        .expect("Failed to open image")
-        .decode()
-        .expect("Failed to decode image")
-        .into_luma8();
+    // Extract frames using FFmpeg
+    fs::create_dir_all("frames").expect("Failed to create frames directory");
+    Command::new("ffmpeg")
+        .args(["-i", video_path, "-vf", "fps=10,scale=80:-1", "frames/frame%04d.png"])
+        .output()
+        .expect("Failed to extract frames");
 
+    // Get terminal size
     let (term_width, term_height) = term_size::dimensions().unwrap_or((80, 24));
 
-    let img_resized = resize_image(&img, term_width as u32, (term_height * 2) as u32); // Adjust height for aspect ratio
+    // Read and display frames in sequence
+    let frame_paths: Vec<_> = fs::read_dir("frames")
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect();
 
-    for y in (0..img_resized.height()).step_by(2) {
-        for x in 0..img_resized.width() {
-            let pixel = img_resized.get_pixel(x, y)[0];
-            let char_to_print = if pixel > 128 { display_char } else { ' ' };
-            print!("{}", char_to_print);
+    for frame_path in frame_paths {
+        let img = ImageReader::open(&frame_path)
+            .expect("Failed to open frame")
+            .decode()
+            .expect("Failed to decode frame")
+            .into_luma8();
+
+        let img_resized = resize_image(&img, term_width as u32, (term_height * 2) as u32);
+
+        // Clear the terminal before printing the next frame
+        execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
+
+        for y in (0..img_resized.height()).step_by(2) {
+            for x in 0..img_resized.width() {
+                let pixel = img_resized.get_pixel(x, y)[0];
+                let char_to_print = if pixel < 128 { ' ' } else { display_char };
+                print!("{}", char_to_print);
+            }
+            println!();
         }
-        println!();
+
+        // Adjust the framerate (10 FPS)
+        thread::sleep(Duration::from_millis(100));
     }
+
+    // Cleanup: Delete extracted frames
+    fs::remove_dir_all("frames").expect("Failed to clean up frames");
 }
+
+fn resize_image(img: &GrayImage, width: u32, height: u32) -> GrayImage {
+    let resized = image::imageops::resize(img, width, height, image::imageops::FilterType::Nearest);
+
+    let mut binary = GrayImage::new(resized.width(), resized.height());
+    for y in 0..resized.height() {
+        for x in 0..resized.width() {
+            let pixel = resized.get_pixel(x, y)[0];
+            let bw_pixel = if pixel < 128 { Luma([0]) } else { Luma([255]) };
+            binary.put_pixel(x, y, bw_pixel);
+        }
+    }
+    binary
+}
+
 
 */
