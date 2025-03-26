@@ -1,3 +1,6 @@
+// DISCLAIMER : While all the ideas behind this project stems from our brain, numerous implementations were done thanks to ChatGPT
+// See the file log.txt for more informations
+
 use crossterm::{cursor, terminal, ExecutableCommand};
 use std::io::{Write, stdout};
 use std::process::exit;
@@ -9,7 +12,7 @@ use std::time::{Duration, Instant};
 use std::env;
 use std::process::Command;
 
-// Enumération permettant de savoir dans quelle direction les caractères de la digital rain "tomberont" 
+// Enumeration that contains the direction in which the digital rain may fall
 #[derive(Debug, Copy, Clone)]
 enum Direction 
 {
@@ -19,7 +22,7 @@ enum Direction
     Right,
 }
 
-// Enumération contenant l'alphabet qui déterminera les caractères de la digital rain
+// Enumeration containing the alphabets that will determine the characters of the digital rain
 #[derive(Debug, Copy, Clone)]
 enum Alphabet
 {
@@ -31,14 +34,12 @@ enum Alphabet
     Greek,
 }
 
-
-// Implémentation du trait FromStr pour l'enum Direction
-// Retourne un Result, ce qui permet de gérer correctement les erreurs par la suite
+// Implementation of the trait FromSTr for the enum Direction
+// Return a Result, allowing us to correctly tackle errors
 impl FromStr for Direction 
 {
-    type Err = String; // Le type de l'erreur sera une String
+    type Err = String; // The error type will be a String
 
-    // On remarque que from_str retourne bien un type Result
     fn from_str(s: &str) -> Result<Self, Self::Err> 
     {
         match s {
@@ -51,8 +52,8 @@ impl FromStr for Direction
     }
 }
 
-// Implémentation du trait FromStr pour l'enum Alphabet
-// Retourne un Result, ce qui permet de gérer correctement les erreurs par la suite
+// Implementation of the trait FromStr for the enumeration Alphabet
+// It has the same purpose as the one for Direction
 impl FromStr for Alphabet{
     type Err = String;
 
@@ -69,25 +70,26 @@ impl FromStr for Alphabet{
     }
 }
 
-// Fonction pour effacer complètement le terminal
+// Function used to entirely clear the terminal before the digital rain
 fn clear_screen() {
     let status = Command::new("clear").status(); 
     match status {
-        Ok(_) => {}, // Rien à faire en cas de succès
-        Err(e) => eprintln!("Erreur lors de l'effacement du terminal: {}", e),
+        Ok(_) => {}, 
+        Err(e) => eprintln!("Error during the clearance of the terminal: {}", e),
     }
 }
 
 
-// Fonction permettant d'afficher une chaîne de caractère string à l'écran dans la direction précisée
-// height et width sont en pratique les dimensions du terminal
-// x et y sont les coordonnées de départ ou de fin de déplacement de la string
+// Main function : print a string at the screen in the precised direction
+// height and width are in practice the terminal's dimensions
+// x and y are either the coordinates of start or of end of the string's movement
 fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16, width: u16) {
     
-    let mut stdout = stdout(); // Sortie du terminal
+    let mut stdout = stdout(); // Output of the terminal
 
-    // Utilisation de saturating_sub pour éviter les erreurs de résultats de soustraction négatifs (Résultats capés à 0)
-    // Détermination de l'intervalle de déplacement de la chaîne de caractère
+    // Determination of the movements's intervall of the string
+    // Use of saturating_sub in order to prevent errors of negative result of soustraction (results minimized at 0)
+    // Why : we can't print a character at the position (-3, 10) or (5, -7)
     let steps = match direction {
         Direction::Down => height.saturating_sub(y),
         Direction::Up => y.saturating_add(1),
@@ -95,16 +97,19 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
         Direction::Right => width.saturating_sub(x),
     };
 
-    // Boucle principale pour afficher puis effacer la chaîne de caractère
+    // Main loop to print then erase a string
     for step in 0..steps {
         {
-            // Utilisation sécurisée du terminal
+            // Secured and exclusive use of the terminal
             let _lock = stdout.lock();
             
-            //Affichage de la chaîne de caractère d'un coup
-            for (i, ch) in string.chars().enumerate() {
-                let step_updated = step + i as u16;
+            // Print of the string in one go
 
+            // Enumeration on the characters of the string
+            for (i, ch) in string.chars().enumerate() { 
+                let step_updated = step + i as u16;
+                
+                // Establishment of the position (x_new, y_new) to print the character
                 let (x_new, y_new) = match direction {
                     Direction::Down => (x, y + step_updated),
                     Direction::Up => (x, y.saturating_sub(step_updated)),
@@ -112,7 +117,7 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
                     Direction::Right => (x + step_updated, y),
                 };
 
-                // Vérifier si le caractère est supposé être encore visible à l'écran
+                // Checking if the character is supposed to still be visible on the screen
                 let visible = match direction {
                     Direction::Down => y_new < height,
                     Direction::Up => y_new < height,
@@ -120,7 +125,7 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
                     Direction::Right => x_new < width,
                 };
                 
-                // Si c'est le cas, on peut l'afficher
+                // If that is the case, we can print it
                 if visible {
                     match stdout.execute(cursor::MoveTo(x_new, y_new)){
                         Ok(_) => {
@@ -131,25 +136,22 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
                     
                 }
             }
-            match stdout.flush() {
-                Ok(_) => {}, 
-                Err(e) => eprintln!("Erreur lors du flush de stdout: {}", e),
-            }
-            
         }
         
-        // Pause pour l'animation
+        // Pause for the animation
         sleep(Duration::from_millis(100));
 
         {
-            // Utilisation de stdout de manière sécurisée
+            // Secured and exclusive use of the terminal
             let _lock = stdout.lock();
             
-            //Effacement de la chaîne de caractère d'un coup
+            // Erasing of the string in one go
+            // Similar process for the print of the string 
+            // Only difference is that we are printing a " " character over the previous ch character
+
             for (i, _) in string.chars().enumerate() {
                 let step_updated = step + i as u16;
                 
-                // Utilisation de saturating_sub à nouveau
                 let (x_new, y_new) = match direction {
                     Direction::Down => (x, y + step_updated),
                     Direction::Up => (x, y.saturating_sub(step_updated)),
@@ -157,7 +159,6 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
                     Direction::Right => (x + step_updated, y),
                 };
 
-                // Vérifier si le caractère est encore visible avant de l'effacer
                 let visible = match direction {
                     Direction::Down => y_new < height,
                     Direction::Up => y_new < height,
@@ -171,19 +172,15 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
                         Err(e) => eprintln!("Failed to move cursor: {}", e),
                     }
                 }
-            }
-            match stdout.flush() {
-                Ok(_) => {}, // Rien à faire en cas de succès
-                Err(e) => eprintln!("Erreur lors du flush de stdout: {}", e),
-            }
-            
+            } 
         }
     }
 }
 
-// Fonction pour générer une string de manière aléatoire en fonction de l'alphabet choisi
-fn random_string(len: usize, alphabet : Alphabet) -> String {
+// Function generating a random string based on the chosen alphabet
+fn random_string(string_len: usize, alphabet : Alphabet) -> String {
 
+    // All the possible alphabets available
     let charset = match alphabet{
         Alphabet::Chinese => "的一是在不了有和人这中大为上个国我以要他时来用们生到作地于出就分对成会可主发年动同工也能下过子说产种面而方后多定行学法所民得经十三之进着等部度家电力里如水化高自二理起小物现实加量都两体制机当",
         Alphabet::Japanese => "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン",
@@ -193,27 +190,27 @@ fn random_string(len: usize, alphabet : Alphabet) -> String {
         Alphabet::Greek => "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρστυφχψω",
     };
 
-    let mut result = String::new(); // String à retourner à la fin
+    let mut result = String::new(); // String to be returned
 
-    // Calcul du nombre réel de caractères du charset en prenant en compte la taille de certains caractères spéciaux
-    let charset_chars: Vec<char> = charset.chars().collect(); // Prise en compte de la taille des caractères non latins
-    let charset_len = charset_chars.len(); // Nombre réel de caractères de charset
+    // Computation of the true number of the characters in the charset while taking in account the size of some special character
+    let charset_chars: Vec<char> = charset.chars().collect(); // Taking account of the size of non-latin characters
+    let charset_len = charset_chars.len(); // True number of characters in the charset
 
-    for _ in 0..len {
-        let random_index = random_range(0..charset_len); // Génère un index compris entre 0 et charset.len()
-        if let Some(random_char) = charset.chars().nth(random_index) {
-            result.push(random_char); // Ajoute le caractère à la chaîne
+    for _ in 0..string_len {
+        let random_index = random_range(0..charset_len); // Generate an index between 0 and charset.len() - 1
+        if let Some(random_char) = charset.chars().nth(random_index) { // Select the character of charset at the index random_index
+            result.push(random_char); // Add the character to result
         } 
         else {
-            eprintln!("Error : index {} out of range for charset '{}'", random_index, charset); // En cas d'erreur
+            eprintln!("Error : index {} out of range for charset '{}'", random_index, charset); 
         }
     }
     return result 
 }
 
-// Détermine le x et y de print_string selon la direction donnée par l'utilisateur
+// Determine the x and y needed in print_string based ont the direction given by the user
 fn xy_by_direction(direction: Direction, height: u16, width: u16) -> (u16, u16){
-    let (mut x, mut y) : (u16, u16) = (0, 0);
+    let (mut x, mut y) : (u16, u16);
 
     match direction{
         Direction::Down => {
@@ -240,18 +237,18 @@ fn xy_by_direction(direction: Direction, height: u16, width: u16) -> (u16, u16){
 
 fn main() {
 
-    let args: Vec<String> = env::args().collect();  // Récupérer les arguments fournis par l'utilisateur
-                                                    // args[0] : nom de l'exécutable (./target/debug/Projet)
-                                                    // args[1] : direction de la digital rain
-                                                    // args[2] : alphabet choisi
+    let args: Vec<String> = env::args().collect();  // Recover the arguments given by the user
+                                                    // args[0] : name of the executable file (./target/debug/Projet)
+                                                    // args[1] : direction of the digital rain
+                                                    // args[2] : chosen alphabet 
 
-    // Affichage d'un message d'erreur + explication d'utilisation si il n'y a pas le nombre d'argument requis
+    // Display of an error message and a usage notification in case the number of arguments is incorrect
     if args.len() != 4 {
         println!("Number of arguments incorrect \nCorrect use : executable direction alphabet duration_in_seconds");
         exit(1);
     }    
     
-    // Test de l'argument 1 donné par l'utilisateur
+    // Test of argument 1 given by the user
     let direction: Direction = match args[1].parse() {
         Ok(dir) => dir,
         Err(e) => {
@@ -260,7 +257,7 @@ fn main() {
         }
     };
     
-    // Test de l'argument 2 donné par l'utilisateur
+    // Test of argument 2 given by the user
     let alphabet: Alphabet = match args[2].parse() {
         Ok(alph) => alph,
         Err(e) => {
@@ -269,56 +266,55 @@ fn main() {
         }
     };
 
-    // Test de l'argument 3 donné par l'utilisateur
+    // Test of argument 3 given by the user
     let duration: u16 = match args[3].parse::<u16>() {
         Ok(n) => n,
         Err(_) => {
-            eprintln!("Erreur : '{}' n'est pas une durée valide (donner un entier positif)", args[3]);
+            eprintln!("Error : '{}' isn't a valid duration (give a positive integer)", args[3]);
             exit(1);
         }
     };
 
-    if let Ok((width, height)) = terminal::size() { // Dimensions du terminal
-        clear_screen(); // "Vide" l'écran du terminal
-        let mut stdout = stdout(); // Sortie du terminal
-    
-        // Masquer le curseur pour un rendu plus propre
+    if let Ok((width, height)) = terminal::size() { // Dimensions of the terminal
+        clear_screen(); // Clear the terminal's screen
+        
+        let mut stdout = stdout(); // Recovery of the terminal's output to hide its cursor for a better rendering
         match stdout.execute(cursor::Hide) {
             Ok(_) => (),
-            Err(e) => eprintln!("Erreur lors du masquage du curseur : {}", e),
+            Err(e) => eprintln!("Error during the camouflage of the cursor : {}", e),
         }
     
-        let start_time = Instant::now(); // Démarrer le chronomètre
-        let mut handles = vec![]; 
+        let start_time = Instant::now(); // Start the timer (to determine when to stop the digital rain)
+        let mut handles = vec![]; // Vector to store the handles of the threads used later on
     
-        while start_time.elapsed().as_secs() < duration as u64 { // Vérifier si durations secondes se sont écoulées
+        while start_time.elapsed().as_secs() < duration as u64 { // Checking if duration seconds have been elapsed
             
-            // Génération de 4 threads pour afficher plus de chaînes de caractère 
+            // Generation of 4 threads to parallelise print_string() 
             for _ in 0..4{
-                let random_length = random_range(5..20); // Longueur aléatoire de la chaîne
-                let generated_string = random_string(random_length, alphabet); // Générer une chaîne de random_length
-                let width = width;
-                let height = height;
+                let random_length = random_range(5..20); 
+                let generated_string = random_string(random_length, alphabet); // Generation of a string of random_length
+                let width = width; // Copy of the dimensions of the terminal
+                let height = height; // Copy of the dimensions of the terminal
                 
-                // Lancer un thread pour faire tomber la chaîne
+                // Launch a thread to make the string "fall" in the screen
                 let handle = thread::spawn(move || {
                     let (x, y) = xy_by_direction(direction, height, width);
                     print_string(&generated_string, x, y, direction, height, width);
                 });
 
-                handles.push(handle); // Stocker la thread
+                handles.push(handle); // Store the thread
             }
             
-            // Attendre avant de lancer une autre chute pour éviter la surcharge
+            // Wait before launching another "fall" to prevent overloading
             thread::sleep(Duration::from_millis(150));
         }
     
-        // Attendre que tous les threads en cours se terminent
+        // Waiting that all threads are done
         for handle in handles {
             handle.join().unwrap();
         }
     
-        // Réafficher le curseur avant de quitter
+        // Display the cursor again before ending the programme
         match stdout.execute(cursor::Show) {
             Ok(_) => (),
             Err(e) => eprintln!("Erreur lors du masquage du curseur : {}", e),
@@ -333,9 +329,10 @@ fn main() {
         
 }
     
-// D'abord compiler : cargo run puis lancer la commande ./target/debug/Projet down numbers
+// First compile : cargo run 
+// Then launch the command :  ./target/debug/Projet down numbers 5
+
 // Les caractères chinois et japonais ne s'effacent pas tous
-// Rajouter en paramètre la durée de l'affichageg
 
 
 
