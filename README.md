@@ -1,5 +1,5 @@
 # Projet-Rust---PERNOT-GOULLIN
-This is the repository for the Rust project (OUAP-4333E) of the pair PERNOT Thomas and GOULLIN Vianney
+This is the repository for the Rust project (OUAP-4333E) of the pair Thomas PERNOT and Vianney GOULLIN.
 
 Here are some requisites before starting :
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -87,6 +87,13 @@ Here are some requisites before starting :
    kitty
    ```
 
+## Installing Necessary Dependencies for the Video Display
+
+   ```sh
+   sudo apt install ffmpeg
+   cargo add image crossterm term_size
+   ```
+
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### Rust and cargo should also be installed on your computer
@@ -118,3 +125,7 @@ Here are some requisites before starting :
    ./target/debug/Projet
    ```
 
+## IMPORTANT
+
+If you want to execute the digital rain part, please leave the lines 347 to 434 commented.
+If you want to execute the video display part, please comment the lines 3 to 340 and uncomment the lines 347 to 434.

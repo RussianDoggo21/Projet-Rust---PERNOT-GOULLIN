@@ -1,4 +1,4 @@
-// DISCLAIMER : While all the ideas behind this project stems from our brain, numerous implementations were done thanks to ChatGPT
+// DISCLAIMER : While all the ideas behind this project stem from our brains, numerous implementations were done thanks to ChatGPT.
 // See the file log.txt for more informations
 
 use crossterm::{cursor, terminal, ExecutableCommand};
@@ -342,25 +342,15 @@ fn main() {
 
 /*______________________________________________________________________________________________________________________*/
 
-//Prints a video on the terminal with a decent framerate (actually breaks down the video into multiple frames).
-//OK appearance, cannot do better anyway due to inherent terminal resolution.
-
-// DISCLAIMER : The code was generated using ChatGPT, but most of its logic and mechanics have been personally understood.
-
-
-// IMPORTANT - Before executing : 
-// sudo apt install ffmpeg
-// cargo add image term_size crossterm
-
 
 
 /*
 
 
-use image::{GrayImage, io::Reader as ImageReader, Luma};
-use std::{env, fs, thread, time::Duration, process::Command};
+use image::{GrayImage, ImageReader as ImageReader, Luma};
+use std::{env, fs, thread, time::Duration, process::Command, io::{stdout, Write}};
 use term_size;
-use crossterm::{execute, terminal::{Clear, ClearType}};
+use crossterm::{execute, cursor::MoveTo};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -383,10 +373,14 @@ fn main() {
     let (term_width, term_height) = term_size::dimensions().unwrap_or((80, 24));
 
     // Read and display frames in sequence
-    let frame_paths: Vec<_> = fs::read_dir("frames")
+    let mut frame_paths: Vec<_> = fs::read_dir("frames")
         .unwrap()
         .map(|entry| entry.unwrap().path())
         .collect();
+
+    frame_paths.sort(); // Ensure frames are displayed in correct order
+
+    let mut stdout = stdout(); // Get a handle to stdout
 
     for frame_path in frame_paths {
         let img = ImageReader::open(&frame_path)
@@ -397,8 +391,8 @@ fn main() {
 
         let img_resized = resize_image(&img, term_width as u32, (term_height * 2) as u32);
 
-        // Clear the terminal before printing the next frame
-        execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
+        // Move cursor to the top before printing the new frame
+        execute!(stdout, MoveTo(0, 0)).unwrap();
 
         for y in (0..img_resized.height()).step_by(2) {
             for x in 0..img_resized.width() {
@@ -409,8 +403,10 @@ fn main() {
             println!();
         }
 
+        stdout.flush().unwrap(); // Force immediate print to prevent lag
+
         // Adjust the framerate (10 FPS)
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(80));
     }
 
     // Cleanup: Delete extracted frames
@@ -430,6 +426,9 @@ fn resize_image(img: &GrayImage, width: u32, height: u32) -> GrayImage {
     }
     binary
 }
+
+
+
 
 
 */

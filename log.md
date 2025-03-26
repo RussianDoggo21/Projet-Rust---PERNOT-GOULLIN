@@ -97,3 +97,49 @@ The only `unwrap()` we kept was:
 handle.join().unwrap();
 ```
 because it followed the example given in our course.
+
+---
+
+## Tenth commit : "Added a binary image to terminal converter. Video is the next step"
+
+To make the project more **interesting and challenging**, we had the idea to add an animation overlay on the digital rain. 
+The objective was to be able to take any grayscale video in input and display it on the terminal (**in black and white only**), then to only keep the digital droplets where the white elements are, for every frame.
+The first step was to create a program capable of displaying a single frame, a jpg  file in our case.
+
+This part of the code was added as a comment below the program of the digital rain.
+
+---
+
+## Eleventh commit : Features a grayscale video display in terminal
+
+While displaying a single image turned out quite easy, more things had to be taken into account for a whole video.
+Since it does not appear to be possible to display videos straight from their MP4 files, they have to be broken down into multiple frames in a 'frames' folder.
+
+Secondly, only videos natively black and white, with no gray values (unlike old  movies for example) turned out good. `spiral.mp4` is a good example.
+
+Unfortunately, a few `unwrap()` calls were added again and were not deleted at this point.
+
+This part of the code was added as a comment at the end of the program, replacing the previous version.
+
+---
+
+## Twelfth commit : Minor changes and failed fix or previous versio of video display
+
+The rendering from the previous version was quite satisfying.
+
+A few changes were made:
+- Two videos were added. All credits are given in the 'VideoCredits' file.
+- The framerate was changed to 80ms, closer to the original videos.
+- 'badapple.jpg' was deleted as this part of the code now only deals with video.
+
+Now, with the idea of merging this terminal video display with the digital rain part, one major problem had to be addressed: the terminal displays each frame without deleting the previous one. This is not compatible with the current version of digital rain, which lies immediately below the command line. It turned out that the cursor had to be reset to the top-left corner after every frame, using
+```rust
+let mut stdout = stdout();
+```
+and
+```rust
+ stdout.flush().unwrap();
+```
+Even then, the first row of every frame was kept when the history of previous frames before interruption was now expected to not be visible.
+
+A fix to this problem has not been found so far. As such, the project now consists of these two independent "mini-projects". As it is not possible to include another 'main.rs' file in the 'src' folder, the user has to manually comment/uncomment the corresponding parts (cf. README).
