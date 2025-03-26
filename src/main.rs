@@ -69,25 +69,6 @@ impl FromStr for Alphabet{
     }
 }
 
-/* Abandonné pour l'instant */
-/* 
-// Fonction pour modifier la taille de la police dans Kitty
-fn set_kitty_font_size(size: u16) {
-    Command::new("kitty")
-        .args(&["@set-font-size", &size.to_string()])
-        .spawn()
-        .expect("Failed to change font size");
-}
-
-// Fonction pour réinitialiser la taille de la police dans Kitty
-fn reset_kitty_font_size() {
-    Command::new("kitty")
-        .args(&["@set-font-size", "14"]) // Remettre à la taille par défaut
-        .spawn()
-        .expect("Failed to reset font size");
-}
-*/
-
 // Fonction pour effacer complètement le terminal
 fn clear_screen() {
     let status = Command::new("clear").status(); 
@@ -104,9 +85,6 @@ fn clear_screen() {
 fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16, width: u16) {
     
     let mut stdout = stdout(); // Sortie du terminal
-
-    // Modifier la taille de la police avec Kitty
-    //set_kitty_font_size(font_size);
 
     // Utilisation de saturating_sub pour éviter les erreurs de résultats de soustraction négatifs (Résultats capés à 0)
     // Détermination de l'intervalle de déplacement de la chaîne de caractère
@@ -154,7 +132,7 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
                 }
             }
             match stdout.flush() {
-                Ok(_) => {}, // Rien à faire en cas de succès
+                Ok(_) => {}, 
                 Err(e) => eprintln!("Erreur lors du flush de stdout: {}", e),
             }
             
@@ -164,6 +142,7 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
         sleep(Duration::from_millis(100));
 
         {
+            // Utilisation de stdout de manière sécurisée
             let _lock = stdout.lock();
             
             //Effacement de la chaîne de caractère d'un coup
@@ -200,10 +179,6 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
             
         }
     }
-
-    // Réinitialisation de la police de Kitty après affichage
-    //reset_kitty_font_size();
-
 }
 
 // Fonction pour générer une string de manière aléatoire en fonction de l'alphabet choisi
@@ -219,26 +194,30 @@ fn random_string(len: usize, alphabet : Alphabet) -> String {
     };
 
     let mut result = String::new(); // String à retourner à la fin
-    let charset_chars: Vec<char> = charset.chars().collect(); // Afin d'éviter les erreurs dûes aux tailles des caractères non latins
-    let charset_len = charset_chars.len(); // Nombre réel de caractères
+
+    // Calcul du nombre réel de caractères du charset en prenant en compte la taille de certains caractères spéciaux
+    let charset_chars: Vec<char> = charset.chars().collect(); // Prise en compte de la taille des caractères non latins
+    let charset_len = charset_chars.len(); // Nombre réel de caractères de charset
 
     for _ in 0..len {
         let random_index = random_range(0..charset_len); // Génère un index compris entre 0 et charset.len()
         if let Some(random_char) = charset.chars().nth(random_index) {
             result.push(random_char); // Ajoute le caractère à la chaîne
-        } else {
+        } 
+        else {
             eprintln!("Error : index {} out of range for charset '{}'", random_index, charset); // En cas d'erreur
         }
     }
-
     return result 
 }
 
+// Détermine le x et y de print_string selon la direction donnée par l'utilisateur
 fn xy_by_direction(direction: Direction, height: u16, width: u16) -> (u16, u16){
     let (mut x, mut y) : (u16, u16) = (0, 0);
+
     match direction{
         Direction::Down => {
-            x = random_range(0..width); // Choisir une colonne aléatoire
+            x = random_range(0..width); 
             y = 0;
         },
         Direction::Up => {
@@ -259,26 +238,20 @@ fn xy_by_direction(direction: Direction, height: u16, width: u16) -> (u16, u16){
 }
 
 
-
-// Modifier la vitesse de chute des lettres en fonction de leur taille (abandonné)
-// Afficher différentes tailles des lettres (abandonné)
-// Arrière-plan / premier plan (abandonné)
-
-// Affichage de plusieurs alphabets choisi au hasard
 fn main() {
 
-    let args: Vec<String> = env::args().collect(); // Récupérer les arguments fournis par l'utilisateur
-    // args[0] : nom de l'exécutable (./target/debug/Projet)
-    // args[1] : direction de la digital rain
-    // args[2] : alphabet choisi
+    let args: Vec<String> = env::args().collect();  // Récupérer les arguments fournis par l'utilisateur
+                                                    // args[0] : nom de l'exécutable (./target/debug/Projet)
+                                                    // args[1] : direction de la digital rain
+                                                    // args[2] : alphabet choisi
 
     // Affichage d'un message d'erreur + explication d'utilisation si il n'y a pas le nombre d'argument requis
-    if args.len() != 3 {
-        println!("Number of arguments incorrect \nCorrect use : executable direction alphabet");
+    if args.len() != 4 {
+        println!("Number of arguments incorrect \nCorrect use : executable direction alphabet duration_in_seconds");
         exit(1);
     }    
     
-    // Test des strings données par l'utilisateur
+    // Test de l'argument 1 donné par l'utilisateur
     let direction: Direction = match args[1].parse() {
         Ok(dir) => dir,
         Err(e) => {
@@ -287,6 +260,7 @@ fn main() {
         }
     };
     
+    // Test de l'argument 2 donné par l'utilisateur
     let alphabet: Alphabet = match args[2].parse() {
         Ok(alph) => alph,
         Err(e) => {
@@ -295,8 +269,17 @@ fn main() {
         }
     };
 
-    if let Ok((width, height)) = terminal::size() { // Dimension du terminal
-        clear_screen();
+    // Test de l'argument 3 donné par l'utilisateur
+    let duration: u16 = match args[3].parse::<u16>() {
+        Ok(n) => n,
+        Err(_) => {
+            eprintln!("Erreur : '{}' n'est pas une durée valide (donner un entier positif)", args[3]);
+            exit(1);
+        }
+    };
+
+    if let Ok((width, height)) = terminal::size() { // Dimensions du terminal
+        clear_screen(); // "Vide" l'écran du terminal
         let mut stdout = stdout(); // Sortie du terminal
     
         // Masquer le curseur pour un rendu plus propre
@@ -306,34 +289,28 @@ fn main() {
         }
     
         let start_time = Instant::now(); // Démarrer le chronomètre
-        let duration = Duration::from_secs(10); // Durée totale de la génération
-        let mut handles = vec![]; // Stocke les threads pour les attendre
+        let mut handles = vec![]; 
     
-        for _ in 0..duration.as_millis() { // Vérifier si 10 secondes se sont écoulées
+        while start_time.elapsed().as_secs() < duration as u64 { // Vérifier si durations secondes se sont écoulées
+            
+            // Génération de 4 threads pour afficher plus de chaînes de caractère 
             for _ in 0..4{
-                let length = random_range(5..20); // Longueur aléatoire de la chute
-                //let font_size = random_range(5..100); // Taille aléatoire de la string
-                let generated_string = random_string(length, alphabet); // Générer une chaîne
-                
-                // Lancer un thread pour faire tomber la chaîne
+                let random_length = random_range(5..20); // Longueur aléatoire de la chaîne
+                let generated_string = random_string(random_length, alphabet); // Générer une chaîne de random_length
                 let width = width;
                 let height = height;
-
+                
+                // Lancer un thread pour faire tomber la chaîne
                 let handle = thread::spawn(move || {
-                    //let (mut x, mut y) = (0, 0); 
                     let (x, y) = xy_by_direction(direction, height, width);
                     print_string(&generated_string, x, y, direction, height, width);
                 });
-                handles.push(handle);
+
+                handles.push(handle); // Stocker la thread
             }
             
             // Attendre avant de lancer une autre chute pour éviter la surcharge
             thread::sleep(Duration::from_millis(150));
-    
-            // Arrêter si le temps est écoulé
-            if start_time.elapsed() >= duration {
-                break;
-            }
         }
     
         // Attendre que tous les threads en cours se terminent
