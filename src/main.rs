@@ -1,16 +1,19 @@
 // DISCLAIMER : While all the ideas behind this project stem from our brains, numerous implementations were done thanks to ChatGPT.
 // See the file log.txt for more informations
 
-use crossterm::{cursor, terminal, ExecutableCommand};
+use crossterm::{execute, cursor, terminal, ExecutableCommand};
 use std::io::{Write, stdout};
-use std::process::exit;
+use std::fs;
 use std::thread;
 use std::thread::sleep;
 use std::str::FromStr;
 use rand::random_range;
 use std::time::{Duration, Instant};
 use std::env;
-use std::process::Command;
+use std::process::{Command, exit};
+use image::{GrayImage, ImageReader as ImageReader, Luma};
+use term_size;
+use crossterm::cursor::MoveTo;
 
 // Enumeration that contains the direction in which the digital rain may fall
 #[derive(Debug, Copy, Clone)]
@@ -239,98 +242,199 @@ fn main() {
 
     let args: Vec<String> = env::args().collect();  // Recover the arguments given by the user
                                                     // args[0] : name of the executable file (./target/debug/Projet)
-                                                    // args[1] : direction of the digital rain
-                                                    // args[2] : chosen alphabet 
+                                                    // args[1] : int to choose main1 or main2
+                                                    // args[2] : direction of the digital rain
+                                                    // args[3] : chosen alphabet 
 
     // Display of an error message and a usage notification in case the number of arguments is incorrect
-    if args.len() != 4 {
-        println!("Number of arguments incorrect \nCorrect use : executable direction alphabet duration_in_seconds");
+    if args.len() != 5 && args.len() != 4 {
+        println!("Number of arguments incorrect \nCorrect use 1: {} 1 <direction> <alphabet> <duration_in_seconds> \nCorrect use 2: {} 2 <video_path> <character>", args[0], args[0]);
         exit(1);
     }    
-    
-    // Test of argument 1 given by the user
-    let direction: Direction = match args[1].parse() {
-        Ok(dir) => dir,
-        Err(e) => {
-            eprintln!("{}", e);
-            exit(1);
-        }
-    };
-    
-    // Test of argument 2 given by the user
-    let alphabet: Alphabet = match args[2].parse() {
-        Ok(alph) => alph,
-        Err(e) => {
-            eprintln!("{}", e);
-            exit(1);
-        }
-    };
 
-    // Test of argument 3 given by the user
-    let duration: u16 = match args[3].parse::<u16>() {
-        Ok(n) => n,
+    let type_main: u16 = match args[1].parse::<u16>() {
+        Ok(n) if n == 1 || n == 2 => n,  // Check that the argument given is either 1 or 2
+        Ok(_) => {
+            eprintln!("Error: '{}' is not a valid option (choose between 1 and 2)", args[1]);
+            exit(1);
+        }
         Err(_) => {
-            eprintln!("Error : '{}' isn't a valid duration (give a positive integer)", args[3]);
+            eprintln!("Error: '{}' isn't a valid number", args[1]);
             exit(1);
         }
     };
 
-    if let Ok((width, height)) = terminal::size() { // Dimensions of the terminal
-        clear_screen(); // Clear the terminal's screen
-        
-        let mut stdout = stdout(); // Recovery of the terminal's output to hide its cursor for a better rendering
-        match stdout.execute(cursor::Hide) {
-            Ok(_) => (),
-            Err(e) => eprintln!("Error during the camouflage of the cursor : {}", e),
-        }
-    
-        let start_time = Instant::now(); // Start the timer (to determine when to stop the digital rain)
-        let mut handles = vec![]; // Vector to store the handles of the threads used later on
-    
-        while start_time.elapsed().as_secs() < duration as u64 { // Checking if duration seconds have been elapsed
-            
-            // Generation of 4 threads to parallelise print_string() 
-            for _ in 0..4{
-                let random_length = random_range(5..20); 
-                let generated_string = random_string(random_length, alphabet); // Generation of a string of random_length
-                let width = width; // Copy of the dimensions of the terminal
-                let height = height; // Copy of the dimensions of the terminal
-                
-                // Launch a thread to make the string "fall" in the screen
-                let handle = thread::spawn(move || {
-                    let (x, y) = xy_by_direction(direction, height, width);
-                    print_string(&generated_string, x, y, direction, height, width);
-                });
+    // In case type_main == 1, we display the digital rain                                     
+    if type_main == 1 {
 
-                handles.push(handle); // Store the thread
+        // Display of an error message and a usage notification in case the number of arguments is incorrect
+        if args.len() != 5 {
+            println!("Number of arguments incorrect \nCorrect use : {} 1 direction alphabet duration_in_seconds", args[0]);
+            exit(1);
+        }    
+        
+        // Test of argument 1 given by the user
+        let direction: Direction = match args[2].parse() {
+            Ok(dir) => dir,
+            Err(e) => {
+                eprintln!("{}", e);
+                exit(1);
             }
-            
-            // Wait before launching another "fall" to prevent overloading
-            thread::sleep(Duration::from_millis(150));
-        }
-    
-        // Waiting that all threads are done
-        for handle in handles {
-            handle.join().unwrap();
-        }
-    
-        // Display the cursor again before ending the programme
-        match stdout.execute(cursor::Show) {
-            Ok(_) => (),
-            Err(e) => eprintln!("Erreur lors du masquage du curseur : {}", e),
-        }
-
-    } 
-    
-    else {
-        eprintln!("Erreur : impossible d'obtenir la taille du terminal.");
-        return;
-    }
+        };
         
+        // Test of argument 2 given by the user
+        let alphabet: Alphabet = match args[3].parse() {
+            Ok(alph) => alph,
+            Err(e) => {
+                eprintln!("{}", e);
+                exit(1);
+            }
+        };
+
+        // Test of argument 3 given by the user
+        let duration: u16 = match args[4].parse::<u16>() {
+            Ok(n) => n,
+            Err(_) => {
+                eprintln!("Error : '{}' isn't a valid duration (give a positive integer)", args[3]);
+                exit(1);
+            }
+        };
+
+        if let Ok((width, height)) = terminal::size() { // Dimensions of the terminal
+            clear_screen(); // Clear the terminal's screen
+            
+            let mut stdout = stdout(); // Recovery of the terminal's output to hide its cursor for a better rendering
+            match stdout.execute(cursor::Hide) {
+                Ok(_) => (),
+                Err(e) => eprintln!("Error during the camouflage of the cursor : {}", e),
+            }
+        
+            let start_time = Instant::now(); // Start the timer (to determine when to stop the digital rain)
+            let mut handles = vec![]; // Vector to store the handles of the threads used later on
+        
+            while start_time.elapsed().as_secs() < duration as u64 { // Checking if duration seconds have been elapsed
+                
+                // Generation of 4 threads to parallelise print_string() 
+                for _ in 0..4{
+                    let random_length = random_range(5..20); 
+                    let generated_string = random_string(random_length, alphabet); // Generation of a string of random_length
+                    let width = width; // Copy of the dimensions of the terminal
+                    let height = height; // Copy of the dimensions of the terminal
+                    
+                    // Launch a thread to make the string "fall" in the screen
+                    let handle = thread::spawn(move || {
+                        let (x, y) = xy_by_direction(direction, height, width);
+                        print_string(&generated_string, x, y, direction, height, width);
+                    });
+
+                    handles.push(handle); // Store the thread
+                }
+                
+                // Wait before launching another "fall" to prevent overloading
+                thread::sleep(Duration::from_millis(150));
+            }
+        
+            // Waiting that all threads are done
+            for handle in handles {
+                handle.join().unwrap();
+            }
+        
+            // Display the cursor again before ending the programme
+            match stdout.execute(cursor::Show) {
+                Ok(_) => (),
+                Err(e) => eprintln!("Erreur lors du masquage du curseur : {}", e),
+            }
+
+        } 
+        
+        else {
+            eprintln!("Erreur : impossible d'obtenir la taille du terminal.");
+            return;
+        }
+            
+    }
+
+    // In case type_main == 2, we display a video on the terminal   
+    else if type_main == 2 {
+
+        if args.len() != 4 {
+            eprintln!("Usage: {} 2 <video_path> <character>", args[0]);
+            return;
+        }
+    
+        let video_path = &args[2];
+        let display_char = args[3].chars().next().unwrap_or('#');
+    
+        // Extract frames using FFmpeg
+        fs::create_dir_all("frames").expect("Failed to create frames directory");
+        Command::new("ffmpeg")
+            .args(["-i", video_path, "-vf", "fps=10,scale=80:-1", "frames/frame%04d.png"])
+            .output()
+            .expect("Failed to extract frames");
+    
+        // Get terminal size
+        let (term_width, term_height) = term_size::dimensions().unwrap_or((80, 24));
+    
+        // Read and display frames in sequence
+        let mut frame_paths: Vec<_> = fs::read_dir("frames")
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect();
+    
+        frame_paths.sort(); // Ensure frames are displayed in correct order
+    
+        let mut stdout = stdout(); // Get a handle to stdout
+    
+        for frame_path in frame_paths {
+            let img = ImageReader::open(&frame_path)
+                .expect("Failed to open frame")
+                .decode()
+                .expect("Failed to decode frame")
+                .into_luma8();
+    
+            let img_resized = resize_image(&img, term_width as u32, (term_height * 2) as u32);
+    
+            // Move cursor to the top before printing the new frame
+            execute!(stdout, MoveTo(0, 0)).unwrap();
+    
+            for y in (0..img_resized.height()).step_by(2) {
+                for x in 0..img_resized.width() {
+                    let pixel = img_resized.get_pixel(x, y)[0];
+                    let char_to_print = if pixel < 128 { ' ' } else { display_char };
+                    print!("{}", char_to_print);
+                }
+                println!();
+            }
+    
+            stdout.flush().unwrap(); // Force immediate print to prevent lag
+    
+            // Adjust the framerate (10 FPS)
+            thread::sleep(Duration::from_millis(80));
+        }
+    
+        // Cleanup: Delete extracted frames
+        fs::remove_dir_all("frames").expect("Failed to clean up frames");
+    }
+    
+    fn resize_image(img: &GrayImage, width: u32, height: u32) -> GrayImage {
+        let resized = image::imageops::resize(img, width, height, image::imageops::FilterType::Nearest);
+    
+        let mut binary = GrayImage::new(resized.width(), resized.height());
+        for y in 0..resized.height() {
+            for x in 0..resized.width() {
+                let pixel = resized.get_pixel(x, y)[0];
+                let bw_pixel = if pixel < 128 { Luma([0]) } else { Luma([255]) };
+                binary.put_pixel(x, y, bw_pixel);
+            }
+        }
+        binary
+    }
 }
     
+    
 // First compile : cargo run 
-// Then launch the command :  ./target/debug/Projet down numbers 5
+// Then launch the command : ./target/debug/Projet 1 down numbers 5
+//                      OR : ./target/debug/Projet 2 stickmen1.mp4 f
 
 // Les caractères chinois et japonais ne s'effacent pas tous
 
@@ -344,91 +448,16 @@ fn main() {
 
 
 
-/*
+
+/* 
 
 
-use image::{GrayImage, ImageReader as ImageReader, Luma};
-use std::{env, fs, thread, time::Duration, process::Command, io::{stdout, Write}};
-use term_size;
-use crossterm::{execute, cursor::MoveTo};
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
-        eprintln!("Usage: {} <video_path> <character>", args[0]);
-        return;
-    }
 
-    let video_path = &args[1];
-    let display_char = args[2].chars().next().unwrap_or('#');
-
-    // Extract frames using FFmpeg
-    fs::create_dir_all("frames").expect("Failed to create frames directory");
-    Command::new("ffmpeg")
-        .args(["-i", video_path, "-vf", "fps=10,scale=80:-1", "frames/frame%04d.png"])
-        .output()
-        .expect("Failed to extract frames");
-
-    // Get terminal size
-    let (term_width, term_height) = term_size::dimensions().unwrap_or((80, 24));
-
-    // Read and display frames in sequence
-    let mut frame_paths: Vec<_> = fs::read_dir("frames")
-        .unwrap()
-        .map(|entry| entry.unwrap().path())
-        .collect();
-
-    frame_paths.sort(); // Ensure frames are displayed in correct order
-
-    let mut stdout = stdout(); // Get a handle to stdout
-
-    for frame_path in frame_paths {
-        let img = ImageReader::open(&frame_path)
-            .expect("Failed to open frame")
-            .decode()
-            .expect("Failed to decode frame")
-            .into_luma8();
-
-        let img_resized = resize_image(&img, term_width as u32, (term_height * 2) as u32);
-
-        // Move cursor to the top before printing the new frame
-        execute!(stdout, MoveTo(0, 0)).unwrap();
-
-        for y in (0..img_resized.height()).step_by(2) {
-            for x in 0..img_resized.width() {
-                let pixel = img_resized.get_pixel(x, y)[0];
-                let char_to_print = if pixel < 128 { ' ' } else { display_char };
-                print!("{}", char_to_print);
-            }
-            println!();
-        }
-
-        stdout.flush().unwrap(); // Force immediate print to prevent lag
-
-        // Adjust the framerate (10 FPS)
-        thread::sleep(Duration::from_millis(80));
-    }
-
-    // Cleanup: Delete extracted frames
-    fs::remove_dir_all("frames").expect("Failed to clean up frames");
 }
-
-fn resize_image(img: &GrayImage, width: u32, height: u32) -> GrayImage {
-    let resized = image::imageops::resize(img, width, height, image::imageops::FilterType::Nearest);
-
-    let mut binary = GrayImage::new(resized.width(), resized.height());
-    for y in 0..resized.height() {
-        for x in 0..resized.width() {
-            let pixel = resized.get_pixel(x, y)[0];
-            let bw_pixel = if pixel < 128 { Luma([0]) } else { Luma([255]) };
-            binary.put_pixel(x, y, bw_pixel);
-        }
-    }
-    binary
-}
-
-
-
-
 
 */
+
+
+

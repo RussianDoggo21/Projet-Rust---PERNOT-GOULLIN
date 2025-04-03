@@ -5,7 +5,9 @@ edition = "2021"
 
 [dependencies]
 crossterm = "0.28.1"
+image = "0.25.6"
 image-to-ascii = "0.6.0"
 rand = "0.9.0"
+term_size = "0.3.2"
 unicode-normalization = "0.1.24"
 
