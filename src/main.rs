@@ -1,19 +1,26 @@
 // DISCLAIMER : While all the ideas behind this project stem from our brains, numerous implementations were done thanks to ChatGPT.
 // See the file log.txt for more informations
 
-use crossterm::{execute, cursor, terminal, ExecutableCommand};
-use std::io::{Write, stdout};
+use std::env;
 use std::fs;
+use std::io::{stdout, Write};
+use std::process::{exit, Command};
+use std::str::FromStr;
 use std::thread;
 use std::thread::sleep;
-use std::str::FromStr;
-use rand::random_range;
 use std::time::{Duration, Instant};
-use std::env;
-use std::process::{Command, exit};
-use image::{GrayImage, ImageReader as ImageReader, Luma};
-use term_size;
+
+use crossterm::{cursor, execute, terminal, ExecutableCommand};
 use crossterm::cursor::MoveTo;
+use image::{GrayImage, ImageReader, Luma};
+use rand::random_range;
+use term_size;
+
+// Enumeration to encapsulate the two possible argument types of the function parse_args (see below)
+enum ParsedArgs {
+    Mode1(Direction, Alphabet, u16),
+    Mode2(String, char),
+}
 
 // Enumeration that contains the direction in which the digital rain may fall
 #[derive(Debug, Copy, Clone)]
@@ -76,10 +83,9 @@ impl FromStr for Alphabet{
 // Function used to entirely clear the terminal before the digital rain
 fn clear_screen() {
     let status = Command::new("clear").status(); 
-    match status {
-        Ok(_) => {}, 
-        Err(e) => eprintln!("Error during the clearance of the terminal: {}", e),
-    }
+    if let Err(e) = status {
+        eprintln!("Error during the clearance of the terminal: {}", e);
+    }    
 }
 
 
@@ -121,12 +127,7 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
                 };
 
                 // Checking if the character is supposed to still be visible on the screen
-                let visible = match direction {
-                    Direction::Down => y_new < height,
-                    Direction::Up => y_new < height,
-                    Direction::Left => x_new < width,
-                    Direction::Right => x_new < width,
-                };
+                let visible = x_new < width && y_new < height;
                 
                 // If that is the case, we can print it
                 if visible {
@@ -162,12 +163,7 @@ fn print_string(string: &str, x: u16, y: u16, direction: Direction, height: u16,
                     Direction::Right => (x + step_updated, y),
                 };
 
-                let visible = match direction {
-                    Direction::Down => y_new < height,
-                    Direction::Up => y_new < height,
-                    Direction::Left => x_new < width,
-                    Direction::Right => x_new < width,
-                };
+                let visible = x_new < width && y_new < height;
                     
                 if visible {
                     match stdout.execute(cursor::MoveTo(x_new, y_new)){
@@ -252,15 +248,56 @@ fn resize_image(img: &GrayImage, width: u32, height: u32) -> GrayImage {
     binary
 }
 
+// Function to parse user-provided arguments
+fn parse_args() -> Result<ParsedArgs, String> {
+    let args: Vec<String> = std::env::args().collect(); // Retrieve command-line arguments
+    
+    // Check the number of arguments
+    if args.len() != 5 && args.len() != 4 {
+        return Err(format!(
+            "Incorrect number of arguments\n\
+             Correct usage 1: {} 1 <direction> <alphabet> <duration_in_seconds>\n\
+             Correct usage 2: {} 2 <video_path> <character>",
+            args[0], args[0]
+        ));    
+    }    
+
+    // Parse the mode type (1 or 2)
+    let type_main: u16 = args[1].parse::<u16>()
+        .map_err(|_| format!("Error: '{}' is not a valid number", args[1]))?;
+    
+    if type_main != 1 && type_main != 2 {
+        return Err(format!("Error: '{}' is not a valid option (choose between 1 and 2)", args[1]));
+    }
+
+    // If `type_main == 1`, validate <direction>, <alphabet>, and <duration_in_seconds>
+    if type_main == 1 {
+        let direction: Direction = args[2].parse()
+            .map_err(|_| format!("Error: '{}' is not a valid direction", args[2]))?;
+        let alphabet: Alphabet = args[3].parse()
+            .map_err(|_| format!("Error: '{}' is not a valid alphabet", args[3]))?;
+        let duration: u16 = args[4].parse()
+            .map_err(|_| format!("Error: '{}' is not a valid duration (expected a positive integer)", args[4]))?;
+        
+        return Ok(ParsedArgs::Mode1(direction, alphabet, duration));
+    }
+
+    // If `type_main == 2`, validate <video_path> and <character>
+    let video_path = args[2].clone();
+    let character = args[3].chars().next()
+        .ok_or_else(|| format!("Error: '{}' is not a valid character", args[3]))?;
+
+    Ok(ParsedArgs::Mode2(video_path, character))
+}
+
 // Function to call the digital rain
 fn main1(direction : Direction, alphabet : Alphabet, duration : u16){
     if let Ok((width, height)) = terminal::size() { // Dimensions of the terminal
         clear_screen(); // Clear the terminal's screen
         
         let mut stdout = stdout(); // Recovery of the terminal's output to hide its cursor for a better rendering
-        match stdout.execute(cursor::Hide) {
-            Ok(_) => (),
-            Err(e) => eprintln!("Error during the camouflage of the cursor : {}", e),
+        if let Err(e) = stdout.execute(cursor::Hide) {
+            eprintln!("Error during the camouflage of the cursor: {}", e);
         }
     
         let start_time = Instant::now(); // Start the timer (to determine when to stop the digital rain)
@@ -294,11 +331,9 @@ fn main1(direction : Direction, alphabet : Alphabet, duration : u16){
         }
     
         // Display the cursor again before ending the programme
-        match stdout.execute(cursor::Show) {
-            Ok(_) => (),
-            Err(e) => eprintln!("Erreur lors du masquage du curseur : {}", e),
+        if let Err(e) = stdout.execute(cursor::Show){
+            eprintln!("Erreur lors du masquage du curseur : {}", e)
         }
-
     } 
     
     else {
@@ -308,12 +343,13 @@ fn main1(direction : Direction, alphabet : Alphabet, duration : u16){
 }
 
 // Function to display a video on the terminal screen
-fn main2(video_path : &String, display_char: char){
+fn main2(video_path : String, display_char: char){
 
+    let video_path_str = video_path.as_str();
     // Extract frames using FFmpeg
     fs::create_dir_all("frames").expect("Failed to create frames directory");
     Command::new("ffmpeg")
-        .args(["-i", video_path, "-vf", "fps=10,scale=80:-1", "frames/frame%04d.png"])
+        .args(["-i", video_path_str, "-vf", "fps=10,scale=80:-1", "frames/frame%04d.png"])
         .output()
         .expect("Failed to extract frames");
 
@@ -360,88 +396,20 @@ fn main2(video_path : &String, display_char: char){
     // Cleanup: Delete extracted frames
     fs::remove_dir_all("frames").expect("Failed to clean up frames");
 }
-    
-
-
 
 fn main() {
-
-    let args: Vec<String> = env::args().collect();  // Recover the arguments given by the user
-                                                    // args[0] : name of the executable file (./target/debug/Projet)
-                                                    // args[1] : int to choose main1 or main2
-                                                    // args[2] : direction of the digital rain
-                                                    // args[3] : chosen alphabet 
-
-    // Display of an error message and a usage notification in case the number of arguments is incorrect
-    if args.len() != 5 && args.len() != 4 {
-        println!("Number of arguments incorrect \nCorrect use 1: {} 1 <direction> <alphabet> <duration_in_seconds> \nCorrect use 2: {} 2 <video_path> <character>", args[0], args[0]);
-        exit(1);
-    }    
-
-    let type_main: u16 = match args[1].parse::<u16>() {
-        Ok(n) if n == 1 || n == 2 => n,  // Check that the argument given is either 1 or 2
-        Ok(_) => {
-            eprintln!("Error: '{}' is not a valid option (choose between 1 and 2)", args[1]);
-            exit(1);
-        }
-        Err(_) => {
-            eprintln!("Error: '{}' isn't a valid number", args[1]);
-            exit(1);
-        }
-    };
-
-    match type_main {
-
-        // In case type_main == 1, we display the digital rain      
-        1 => {
-            // Display of an error message and a usage notification in case the number of arguments is incorrect
-            if args.len() != 5 {
-                println!("Number of arguments incorrect \nCorrect use : {} 1 direction alphabet duration_in_seconds", args[0]);
-                exit(1);
-            }    
-            
-            // Test of argument 1 given by the user
-            let direction: Direction = match args[2].parse() {
-                Ok(dir) => dir,
-                Err(e) => {
-                    eprintln!("{}", e);
-                    exit(1);
-                }
-            };
-            
-            // Test of argument 2 given by the user
-            let alphabet: Alphabet = match args[3].parse() {
-                Ok(alph) => alph,
-                Err(e) => {
-                    eprintln!("{}", e);
-                    exit(1);
-                }
-            };
-
-            // Test of argument 3 given by the user
-            let duration: u16 = match args[4].parse::<u16>() {
-                Ok(n) => n,
-                Err(_) => {
-                    eprintln!("Error : '{}' isn't a valid duration (give a positive integer)", args[3]);
-                    exit(1);
-                }
-            };
+    // Test of the arguments with parse_args then call of the correct function
+    match parse_args() {
+        Ok(ParsedArgs::Mode1(direction, alphabet, duration)) => {
             main1(direction, alphabet, duration);
-        },
-
-        // In case type_main == 2, we display a video on the terminal   
-        2 => {
-            if args.len() != 4 {
-                eprintln!("Usage: {} 2 <video_path> <character>", args[0]);
-                return;
-            }
-        
-            let video_path = &args[2];
-            let display_char = args[3].chars().next().unwrap_or('#');
-            main2(video_path, display_char);
         }
-
-        _ => unreachable!(),
+        Ok(ParsedArgs::Mode2(video_path, character)) => {
+            main2(video_path, character);
+        }
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
     }
 }
      
