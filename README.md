@@ -119,13 +119,12 @@ Here are some requisites before starting :
    kitty
    ```
 
-4. Execute the compiled binary:
+4. Execute the compiled binary with one of the 2 following commands:
    
    ```sh
-   ./target/debug/Projet
+   ./target/debug/Projet 1 down latin 3      
    ```
 
-## IMPORTANT
-
-If you want to execute the digital rain part, please leave the lines 347 to 434 commented.
-If you want to execute the video display part, please comment the lines 3 to 340 and uncomment the lines 347 to 434.
+   ```sh
+   ./target/debug/Projet 2 stickmen1.mp4 f      
+   ```
