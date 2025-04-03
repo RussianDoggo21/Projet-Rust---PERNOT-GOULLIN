@@ -143,3 +143,17 @@ and
 Even then, the first row of every frame was kept when the history of previous frames before interruption was now expected to not be visible.
 
 A fix to this problem has not been found so far. As such, the project now consists of these two independent "mini-projects". As it is not possible to include another 'main.rs' file in the 'src' folder, the user has to manually comment/uncomment the corresponding parts (cf. README).
+
+## First commit post-evaluation : Add of the argument to call either one of our 2 'main' functions
+
+We added another argument called `type_main` to determine whether the user wanted to use the programm that displayed the digital rain or the video on the terminal.
+
+## Second and third commits post-evaluation : Refactorisation of the code
+
+Creation of two functions `main1` (digital rain) and `main2` (video) to be called by the "real" main function.
+With the help of Chat GPT, creation of the function `parse_args` to check the arguments given by the user and deal with the possible errors that may arise.
+Modification of some rough draft in the syntax of the code.
+
+## Fourth commit post-evaluation : Update of the README.me and log.md
+
+We also created a folder `Videos` for a clear structure of the GitHub deposit.
