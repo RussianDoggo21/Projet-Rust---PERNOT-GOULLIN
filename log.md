@@ -123,7 +123,7 @@ This part of the code was added as a comment at the end of the program, replacin
 
 ---
 
-## Twelfth commit : Minor changes and failed fix or previous versio of video display
+## Twelfth commit : Minor changes and failed fix of previous version of video display
 
 The rendering from the previous version was quite satisfying.
 
@@ -144,9 +144,13 @@ Even then, the first row of every frame was kept when the history of previous fr
 
 A fix to this problem has not been found so far. As such, the project now consists of these two independent "mini-projects". As it is not possible to include another 'main.rs' file in the 'src' folder, the user has to manually comment/uncomment the corresponding parts (cf. README).
 
+---
+
 ## First commit post-evaluation : Add of the argument to call either one of our 2 'main' functions
 
 We added another argument called `type_main` to determine whether the user wanted to use the programm that displayed the digital rain or the video on the terminal.
+
+---
 
 ## Second and third commits post-evaluation : Refactorisation of the code
 
@@ -154,6 +158,16 @@ Creation of two functions `main1` (digital rain) and `main2` (video) to be calle
 With the help of Chat GPT, creation of the function `parse_args` to check the arguments given by the user and deal with the possible errors that may arise.
 Modification of some rough draft in the syntax of the code.
 
+---
+
 ## Fourth commit post-evaluation : Update of the README.me and log.md
 
 We also created a folder `Videos` for a clear structure of the GitHub deposit.
+
+---
+
+## Fifth commit post-evaluation : A few extra upgrades and updates
+
+We got rid of all the `unwrap` calls and turned them into `expect` for an easier debugging.
+Some extra crates that are now imported in the program were removed from the README. Also removed unused crates in the program.
+The 'frames' folder that was mistakenly imported in the last commits was deleted, as it is automatically created/replaced at execution.

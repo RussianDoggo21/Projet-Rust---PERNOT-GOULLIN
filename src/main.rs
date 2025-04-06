@@ -1,10 +1,9 @@
 // DISCLAIMER : While all the ideas behind this project stem from our brains, numerous implementations were done thanks to ChatGPT.
 // See the file log.txt for more informations
 
-use std::env;
 use std::fs;
 use std::io::{stdout, Write};
-use std::process::{exit, Command};
+use std::process::{Command};
 use std::str::FromStr;
 use std::thread;
 use std::thread::sleep;
@@ -15,6 +14,7 @@ use crossterm::cursor::MoveTo;
 use image::{GrayImage, ImageReader, Luma};
 use rand::random_range;
 use term_size;
+
 
 // Enumeration to encapsulate the two possible argument types of the function parse_args (see below)
 enum ParsedArgs {
@@ -209,7 +209,7 @@ fn random_string(string_len: usize, alphabet : Alphabet) -> String {
 
 // Determine the x and y needed in print_string based ont the direction given by the user
 fn xy_by_direction(direction: Direction, height: u16, width: u16) -> (u16, u16){
-    let (mut x, mut y) : (u16, u16);
+    let (x, y) : (u16, u16);
 
     match direction{
         Direction::Down => {
@@ -415,9 +415,6 @@ fn main() {
      
 // First compile : cargo run 
 // Then launch the command : ./target/debug/Projet 1 down numbers 5
-//                      OR : ./target/debug/Projet 2 stickmen1.mp4 f
+//                      OR : ./target/debug/Projet 2 Videos/stickmen1.mp4 f
 
 // Les caractères chinois et japonais ne s'effacent pas tous
-
-
-

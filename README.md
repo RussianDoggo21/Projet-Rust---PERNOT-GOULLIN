@@ -91,7 +91,6 @@ Here are some requisites before starting :
 
    ```sh
    sudo apt install ffmpeg
-   cargo add image crossterm term_size
    ```
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -119,12 +118,12 @@ Here are some requisites before starting :
    kitty
    ```
 
-4. Execute the compiled binary with one of the 2 following commands:
+4. Execute the compiled binary with one of the 2 following commands (examples):
    
    ```sh
    ./target/debug/Projet 1 down latin 3      
    ```
 
    ```sh
-   ./target/debug/Projet 2 stickmen1.mp4 f      
+   ./target/debug/Projet 2 Videos/stickmen1.mp4 f      
    ```
